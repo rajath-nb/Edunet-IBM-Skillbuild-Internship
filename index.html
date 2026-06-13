@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agri-Robot Command Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-image: url('/static/01-the-history-of-agriculture-873x350.webp');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 35px 30px;
+            border-radius: 12px;
+            box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        h2 {
+            text-align: center;
+            color: #1e5631;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #4a4a4a;
+            margin-top: 15px;
+            display: block;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 18px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+            font-family: 'Montserrat', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #28a745;
+            outline: none;
+            box-shadow: 0 0 6px rgba(40, 167, 69, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #218838;
+        }
+
+        #statusBadge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        #treatmentResult {
+            margin-top: 15px;
+            font-size: 18px;
+            text-align: center;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        #reportResult {
+            margin-top: 25px;
+            padding: 25px;
+            background: #f9fdf9;
+            border-left: 5px solid #28a745;
+            border-radius: 0 8px 8px 0;
+            font-size: 15px;
+            line-height: 1.7;
+            display: none;
+        }
+
+        #reportResult h1,
+        #reportResult h2,
+        #reportResult h3 {
+            color: #1e5631;
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>🌿 Agri-Shield Command</h2>
+
+        <label>Select Language / भाषा चुनें:</label>
+        <select id="languageSelect">
+            <option value="English">English</option>
+            <option value="Hindi">Hindi (हिन्दी)</option>
+            <option value="Kannada">Kannada (ಕನ್ನಡ)</option>
+            <option value="Tamil">Tamil (தமிழ்)</option>
+            <option value="Telugu">Telugu (తెలుగు)</option>
+            <option value="Malayalam">Malayalam (മലയാളം)</option>
+        </select>
+
+        <label>Enter Plant Name:</label>
+        <input type="text" id="plantInput" list="plantList" placeholder="e.g., Tomato, Wheat...">
+        <datalist id="plantList">
+            {% for plant in plants %}<option value="{{ plant }}">{% endfor %}
+        </datalist>
+
+        <label>Enter Detected Disease / Symptoms:</label>
+        <input type="text" id="diseaseInput" list="diseaseList" placeholder="e.g., Yellow leaves...">
+        <datalist id="diseaseList">
+            {% for disease in diseases %}<option value="{{ disease }}">{% endfor %}
+        </datalist>
+
+        <button onclick="getPrediction()">Analyze & Translate</button>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <div id="statusBadge"></div>
+        </div>
+        <div id="treatmentResult"></div>
+        <div id="reportResult"></div>
+    </div>
+
+    <script>
+        // AI Dynamic Language Translation for UI Options
+        document.getElementById('languageSelect').addEventListener('change', async function () {
+            const language = this.value;
+            const statusBadge = document.getElementById('statusBadge');
+
+            if (language === 'English') {
+                statusBadge.innerHTML = "Switched to English";
+                setTimeout(() => statusBadge.innerHTML = "", 2000);
+                return; // Optionally, you could reload standard english lists here
+            }
+
+            statusBadge.innerHTML = `⏳ Translating menus to ${language} via AI...`;
+            statusBadge.style.backgroundColor = "#e2e3e5";
+            statusBadge.style.color = "#333";
+
+            try {
+                const response = await fetch('/translate_ui', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ language: language })
+                });
+                const data = await response.json();
+
+                if (!data.error) {
+                    // Inject AI translated Plants
+                    const plantList = document.getElementById('plantList');
+                    plantList.innerHTML = '';
+                    data.plants.forEach(plant => {
+                        plantList.innerHTML += `<option value="${plant}">`;
+                    });
+
+                    // Inject AI translated Diseases
+                    const diseaseList = document.getElementById('diseaseList');
+                    diseaseList.innerHTML = '';
+                    data.diseases.forEach(disease => {
+                        diseaseList.innerHTML += `<option value="${disease}">`;
+                    });
+
+                    // Update Input Placeholders
+                    document.getElementById('plantInput').placeholder = `Type in ${language}...`;
+                    document.getElementById('diseaseInput').placeholder = `Type in ${language}...`;
+
+                    statusBadge.innerHTML = `✅ Menus updated to ${language}`;
+                    statusBadge.style.backgroundColor = "#d4edda";
+                    statusBadge.style.color = "#155724";
+                } else {
+                    statusBadge.innerHTML = `❌ UI Translation Failed`;
+                }
+            } catch (err) {
+                statusBadge.innerHTML = `❌ Connection Error`;
+            }
+            setTimeout(() => { if (statusBadge.innerHTML.includes('✅')) statusBadge.innerHTML = ""; }, 3000);
+        });
+
+        // Prediction Function
+        async function getPrediction() {
+            const plant = document.getElementById('plantInput').value;
+            const disease = document.getElementById('diseaseInput').value;
+            const language = document.getElementById('languageSelect').value;
+
+            const statusBadge = document.getElementById('statusBadge');
+            const treatmentDiv = document.getElementById('treatmentResult');
+            const reportDiv = document.getElementById('reportResult');
+
+            statusBadge.innerHTML = "⏳ AI is Scanning & Translating...";
+            statusBadge.style.backgroundColor = "#fff3cd";
+            statusBadge.style.color = "#856404";
+            treatmentDiv.innerHTML = "";
+            reportDiv.style.display = "none";
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plant: plant, disease: disease, language: language })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    statusBadge.innerHTML = `❌ Error`;
+                    treatmentDiv.innerHTML = `<span style="color:#e74c3c; font-weight: 500;">${data.error}</span>`;
+                } else {
+                    statusBadge.innerHTML = data.status;
+                    statusBadge.style.backgroundColor = data.status.includes('Local') ? "#cce5ff" : "#d4edda";
+
+                    treatmentDiv.innerHTML = data.treatment;
+                    reportDiv.innerHTML = marked.parse(data.report);
+                    reportDiv.style.display = "block";
+                }
+            } catch (err) {
+                statusBadge.innerHTML = `❌ Connection Error`;
+            }
+        }
+    </script>
+</body>
+
+</html>
