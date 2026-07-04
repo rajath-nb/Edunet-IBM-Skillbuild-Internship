@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configure Gemini AI
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY", "AQ.Ab8RN6LoSWtv4IDgmd64jw1S1gzpRZRmv6skHWsaJfumQE7lSw"))
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY", "AQ.Ab8RN6LFpThGhzpMwKIBDOzjI_Vu_lvNw47OfkgCc91_VmUyvA"))
 llm_model = genai.GenerativeModel('gemini-2.5-flash')
 
 app = Flask(__name__)
